@@ -304,7 +304,8 @@ export default function App() {
   const [activePage, setActivePage] = useState('home');
   const [isScrolled, setIsScrolled] = useState(false);
   
-  const [profileImg, setProfileImg] = useState(() => {
+  // 保持头像持久化展示，但不提供更新功能
+  const [profileImg] = useState(() => {
     try {
       const saved = localStorage.getItem('lizzy_profile_persistent');
       if (saved && saved.includes('data:image')) return saved;
@@ -324,22 +325,6 @@ export default function App() {
       ::-webkit-scrollbar { width: 6px; }
       ::-webkit-scrollbar-thumb { background: #E5E2D9; border-radius: 10px; }
       
-      [contenteditable="true"] {
-        transition: all 0.2s ease;
-        padding: 2px 4px;
-        border-radius: 2px;
-        min-height: 1em;
-      }
-      [contenteditable="true"]:hover {
-        background-color: rgba(197, 160, 89, 0.05);
-        outline: 1px dashed rgba(197, 160, 89, 0.3);
-      }
-      [contenteditable="true"]:focus {
-        background-color: white;
-        outline: 2px solid #C5A059;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      }
-
       .masonry-grid {
         column-count: 3;
         column-gap: 1.5rem;
@@ -418,7 +403,7 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-grow pt-32 pb-24">
-        {activePage === 'home' && <HomeView navigateTo={navigateTo} profileImg={profileImg} setProfileImg={setProfileImg} />}
+        {activePage === 'home' && <HomeView navigateTo={navigateTo} profileImg={profileImg} />}
         {activePage === 'about' && <AboutView profileImg={profileImg} />}
         {activePage.startsWith('work') && <WorkView />}
         {activePage === 'contact' && <ContactView />}
@@ -445,33 +430,20 @@ const FadeIn = ({ children, delay = 0, className = "" }) => {
   );
 };
 
-const EditableText = ({ id, initialText, className, element = "div", placeholder = "Click to edit..." }) => {
-  const [content, setContent] = useState(() => {
+// 只读版本的文本组件，移除了 contentEditable 逻辑
+const StaticText = ({ id, initialText, className, element = "div" }) => {
+  const Element = element;
+  const [text] = useState(() => {
     try {
-      const saved = localStorage.getItem(`v6_edit_${id}`); 
-      return saved !== null ? saved : initialText;
+      return localStorage.getItem(`lizzy_edit_${id}`) || initialText;
     } catch (e) {
       return initialText;
     }
   });
 
-  const handleInput = (e) => {
-    const val = e.currentTarget.innerText;
-    setContent(val);
-    localStorage.setItem(`v6_edit_${id}`, val);
-  };
-
-  const Element = element;
-
   return (
-    <Element
-      contentEditable="true"
-      suppressContentEditableWarning={true}
-      onInput={handleInput}
-      placeholder={placeholder}
-      className={`${className} outline-none whitespace-pre-wrap`}
-    >
-      {content}
+    <Element className={`${className} whitespace-pre-wrap outline-none`}>
+      {text}
     </Element>
   );
 };
@@ -523,44 +495,24 @@ const DeviceCarousel = ({ images }) => {
 
 // --- VIEWS ---
 
-const HomeView = ({ navigateTo, profileImg, setProfileImg }) => {
-  const fileInputRef = useRef(null);
-  
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImg(reader.result);
-        localStorage.setItem('lizzy_profile_persistent', reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
+const HomeView = ({ navigateTo, profileImg }) => {
   return (
     <div className="flex flex-col items-center justify-center min-h-[75vh] px-6">
       <FadeIn delay={0.2} className="flex flex-col items-center text-center max-w-4xl mx-auto">
         <div 
-          className="w-56 h-56 md:w-56 md:h-56 mb-10 overflow-hidden relative group rounded-full shadow-xl border-[0.5px] border-[#E5E2D9] cursor-pointer"
-          onClick={() => fileInputRef.current.click()}
+          className="w-56 h-56 md:w-56 md:h-56 mb-10 overflow-hidden relative group rounded-full shadow-xl border-[0.5px] border-[#E5E2D9]"
         >
           <img src={profileImg} alt="Lizzy Li" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
-            <Camera size={24} className="mb-2" />
-            <span className="text-[10px] tracking-widest uppercase">Update Photo</span>
-          </div>
-          <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
         </div>
         
-        <EditableText 
+        <StaticText 
           id="hero-main-title" 
           element="h1" 
           className="font-serif text-3xl md:text-5xl text-[#111111] font-semibold leading-[1.3] mb-6 px-4" 
           initialText="Curating stories that embody the brand’s philosophy and aesthetic, support business objectives, and help solve business challenges." 
         />
 
-        <EditableText 
+        <StaticText 
           id="hero-sub-narrative" 
           element="p" 
           className="font-sans text-sm md:text-base text-[#666666] leading-relaxed max-w-2xl mx-auto mb-10 px-4 font-light" 
@@ -620,19 +572,19 @@ const KeyProjects = () => (
       
       <div className="max-w-4xl mx-auto text-sm text-[#444444] font-light leading-relaxed text-justify mb-24 px-4">
         <div className="mb-8">
-          <EditableText 
+          <StaticText 
             id="p1-vogue-para1" 
             initialText="I played a key role in shaping the content strategy, editorial writing, and brand narrative in Christie’s co-branding initiative with Vogue, which launched to expand its reach beyond core auction audiences into the wider luxury lifestyle sector." 
           />
         </div>
         <div className="mb-8">
-          <EditableText 
+          <StaticText 
             id="p1-vogue-para2" 
             initialText="I collaborated closely on the campaign’s centrepiece brand book, contributing to key sections including an overview of Christie’s 40-year presence in Asia, major milestones, record-breaking highlights, specialist interviews and behind-the-scenes stories, collector profiles, and a structured buying guide to engage young, fashion-forward audiences while protecting Christie’s legacy and promoting its luxury sales." 
           />
         </div>
         <div>
-          <EditableText 
+          <StaticText 
             id="p1-vogue-para3" 
             initialText="Within three months, the campaign generated over half a million social impressions and thousands of website conversions, significantly strengthening brand recall among the target young fashion audience." 
           />
@@ -678,19 +630,19 @@ const KeyProjects = () => (
       
       <div className="max-w-4xl mx-auto text-sm text-[#444444] font-light leading-relaxed text-justify px-4">
         <div className="mb-8">
-          <EditableText 
+          <StaticText 
             id="p2-40th-para1" 
-            initialText="I serve as a core member deeply involved in the entire content planning and production process for Christie’s 40th anniversary content campaign, which aims to showcase Christie‘s rich heritage and industry influence." 
+            initialText="I serve as a core member deeply involved in the entire content planning and production process for Christie’s 40th anniversary content campaign, which aims to showcase Christie’s rich heritage and industry influence." 
           />
         </div>
         <div className="mb-8">
-          <EditableText 
+          <StaticText 
             id="p2-40th-para2" 
             initialText="My key contributions include supporting the manager in organizing and conducting interviews with nearly 30 key internal stakeholders, systematically distilling core insights from raw interview material, and developing the video structure and talking points that lay the foundation for subsequent shooting and other content outputs." 
           />
         </div>
         <div>
-          <EditableText 
+          <StaticText 
             id="p2-40th-para3" 
             initialText="This experience has demonstrated my ability to execute detail-oriented content work, identify key takeaways from fragmented information, synthesize them into cohesive, brand-aligned narratives, and collaborate with cross-functional teams to drive project progress." 
           />
@@ -706,9 +658,9 @@ const KeyProjects = () => (
           <h3 className="font-serif text-2xl leading-tight">Luxury Category Content SEO & AI Search Optimization</h3>
         </div>
         <div className="text-sm text-[#444444] font-light leading-relaxed text-justify space-y-6 mt-4">
-          <EditableText id="p3-seo-para1" initialText="I collaborate with Global SEO Lead to strengthen the brand‘s entity associations and align the brand with core industry topics, establishing it as an authoritative voice in search to improve search rankings and enhance overall digital presence." />
-          <EditableText id="p3-seo-para2" initialText="I achieve this by developing SEO-focused luxury category editorial content to expand our coverage for more search terms, while refining existing content to demonstrate expertise for both Google and our clients." />
-          <EditableText id="p3-seo-para3" initialText="I approach content strategy with a growth-driven mindset: being visible where people search is more important than ever. Rather than creating content for its own sake, I focus on driving qualified, high-intent traffic to the most relevant pages and generating meaningful conversions, securing competitive advantages in the search landscape." />
+          <StaticText id="p3-seo-para1" initialText="I collaborate with Global SEO Lead to strengthen the brand’s entity associations and align the brand with core industry topics, establishing it as an authoritative voice in search to improve search rankings and enhance overall digital presence." />
+          <StaticText id="p3-seo-para2" initialText="I achieve this by developing SEO-focused luxury category editorial content to expand our coverage for more search terms, while refining existing content to demonstrate expertise for both Google and our clients." />
+          <StaticText id="p3-seo-para3" initialText="I approach content strategy with a growth-driven mindset: being visible where people search is more important than ever. Rather than creating content for its own sake, I focus on driving qualified, high-intent traffic to the most relevant pages and generating meaningful conversions, securing competitive advantages in the search landscape." />
         </div>
       </div>
 
@@ -718,9 +670,9 @@ const KeyProjects = () => (
           <h3 className="font-serif text-2xl leading-tight">Internal Translation Tool Development</h3>
         </div>
         <div className="text-sm text-[#444444] font-light leading-relaxed text-justify space-y-6 mt-4">
-          <EditableText id="p4-tool-para1" initialText="I collaborated with the Digital Solutions team to build a custom internal English‑Chinese translation tool, with a long-term roadmap to cover all languages across our global business locations." />
-          <EditableText id="p4-tool-para2" initialText="I defined product requirements, coordinated with engineering to scope and prioritize key features, provided curated training materials to enhance model accuracy, built and maintained glossary libraries to ensure brand language consistency, drafted and refined UI copy, conducted end-to-end user testing, and delivered actionable feedback for ongoing usability optimization." />
-          <EditableText id="p4-tool-para3" initialText="This initiative significantly shortened translation turnaround time and improved terminology consistency, while strengthening my cross-functional collaboration and user-centric problem-solving abilities." />
+          <StaticText id="p4-tool-para1" initialText="I collaborate with the Digital Solutions team to build a custom internal English‑Chinese translation tool, with a long-term roadmap to cover all languages across our global business locations." />
+          <StaticText id="p4-tool-para2" initialText="I defined product requirements, coordinated with engineering to scope and prioritize key features, provided curated training materials to enhance model accuracy, built and maintained glossary libraries to ensure brand language consistency, drafted and refined UI copy, conducted end-to-end user testing, and delivered actionable feedback for ongoing usability optimization." />
+          <StaticText id="p4-tool-para3" initialText="This initiative significantly shortened translation turnaround time and improved terminology consistency, while strengthening my cross-functional collaboration and user-centric problem-solving abilities." />
         </div>
       </div>
     </div>
@@ -728,7 +680,7 @@ const KeyProjects = () => (
 );
 
 const SkillShowcases = () => {
-  const [activeMainTab, setActiveMainTab] = useState('transcreation'); 
+  const [activeMainTab, setActiveMainTab] = useState('editorial'); 
   const mainTabs = [
     { id: 'editorial', label: 'Editorial', icon: <Edit3 size={18} /> },
     { id: 'copywriting', label: 'Copywriting', icon: <Megaphone size={18} /> },
@@ -781,12 +733,12 @@ const EditorialShowcase = () => {
             </div>
             <div className="p-6 flex flex-col flex-grow bg-white">
               <div className="mb-6">
-                <EditableText id={`ed-en-${selectedCat}-${idx}`} className="text-[11px] font-bold tracking-wide text-[#111111] uppercase mb-2" initialText={sample.title_en} />
-                <EditableText id={`ed-desc-en-${selectedCat}-${idx}`} className="text-[10px] leading-relaxed text-[#666666]" initialText={sample.desc_en} />
+                <StaticText id={`ed-en-${selectedCat}-${idx}`} className="text-[11px] font-bold tracking-wide text-[#111111] uppercase mb-2" initialText={sample.title_en} />
+                <StaticText id={`ed-desc-en-${selectedCat}-${idx}`} className="text-[10px] leading-relaxed text-[#666666]" initialText={sample.desc_en} />
               </div>
               <div className="mb-6">
-                <EditableText id={`ed-zh-${selectedCat}-${idx}`} className="text-[13px] font-serif text-[#C5A059] font-medium mb-2" initialText={sample.title_zh} />
-                <EditableText id={`ed-desc-zh-${selectedCat}-${idx}`} className="text-[11px] leading-relaxed text-[#8B8574] font-serif" initialText={sample.desc_zh} />
+                <StaticText id={`ed-zh-${selectedCat}-${idx}`} className="text-[13px] font-serif text-[#C5A059] font-medium mb-2" initialText={sample.title_zh} />
+                <StaticText id={`ed-desc-zh-${selectedCat}-${idx}`} className="text-[11px] leading-relaxed text-[#8B8574] font-serif" initialText={sample.desc_zh} />
               </div>
               <div className="mt-auto pt-4 flex items-center justify-between border-t border-[#F5F3ED] group-hover:text-[#C5A059] cursor-pointer" onClick={() => window.open(sample.link, '_blank')}>
                 <span className="text-[9px] tracking-[0.2em] uppercase font-bold">READ STORY</span>
@@ -813,7 +765,7 @@ const CopywritingShowcase = () => (
                 <span className="text-[10px] font-bold tracking-[0.4em] uppercase">{sample.type}</span>
               </div>
               {!sample.hideText && sample.title && (
-                <EditableText id={`copy-title-${idx}`} element="h4" className="font-serif text-4xl mb-4" initialText={sample.title} />
+                <StaticText id={`copy-title-${idx}`} element="h4" className="font-serif text-4xl mb-4" initialText={sample.title} />
               )}
             </div>
             
@@ -930,17 +882,35 @@ const PRShowcase = () => {
           <h4 className="font-serif text-3xl">Media Clips</h4>
           <p className="text-[10px] tracking-[0.3em] text-[#C5A059] uppercase font-bold">Coverage Highlights</p>
         </div>
-        <div className="masonry-grid">
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 px-4">
           {MEDIA_CLIPS.map((clip, idx) => (
-            <div key={idx} className="masonry-item group cursor-pointer" onClick={() => window.open(clip.link, '_blank')}>
-              <div className="relative overflow-hidden border border-[#E5E2D9] bg-white shadow-sm hover:shadow-2xl transition-all duration-700">
-                <img src={clip.img} className="w-full h-auto grayscale-[0.3] group-hover:grayscale-0 transition-all duration-700 transform group-hover:scale-[1.02]" alt={clip.title} />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-all duration-500 flex items-center justify-center">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-500 transform translate-y-4 group-hover:translate-y-0 text-center px-4">
-                    <span className="text-white font-serif text-2xl mb-2 block">{clip.title}</span>
-                    <span className="text-white/60 text-[8px] tracking-[0.3em] uppercase">Click to Read</span>
+            <div 
+              key={idx} 
+              className="group cursor-pointer relative flex flex-col bg-white overflow-hidden shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_40px_-10px_rgba(197,160,89,0.15)] transition-all duration-700 rounded-lg"
+              onClick={() => window.open(clip.link, '_blank')}
+            >
+              <div className="aspect-[4/5] overflow-hidden bg-[#FDFBF7]">
+                <img 
+                  src={clip.img} 
+                  className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-1000 ease-out" 
+                  alt={clip.title} 
+                />
+              </div>
+              
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-6">
+                <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                  <h5 className="text-white font-serif text-xl mb-2">{clip.title}</h5>
+                  <div className="flex items-center space-x-2 text-[#C5A059] font-bold text-[8px] tracking-[0.2em] uppercase">
+                    <span>VIEW COVERAGE</span>
+                    <ArrowRight size={10} />
                   </div>
                 </div>
+              </div>
+
+              <div className="p-4 flex items-center justify-between border-t border-[#F5F3ED] bg-white group-hover:bg-[#FDFBF7] transition-colors">
+                 <span className="text-[9px] font-bold tracking-widest text-[#8B8574] group-hover:text-[#C5A059] uppercase transition-colors">{clip.title}</span>
+                 <ExternalLink size={12} className="text-[#E5E2D9] group-hover:text-[#C5A059] transition-colors" />
               </div>
             </div>
           ))}
@@ -976,59 +946,16 @@ const TranscreationShowcase = () => {
         title: "Christie’s 2025 Year in Review",
         videoUrl: "https://raw.githubusercontent.com/lizzyli1856-blip/coding/main/thx%20endd.mp4", 
         poster: "https://raw.githubusercontent.com/lizzyli1856-blip/coding/main/%E5%B9%B4%E5%BA%A6%E5%9B%9E%E9%A1%BE.png",
-        en: `HERE AT CHRISTIE’S
-A SINGLE YEAR CONTAINS THE SWEEP OF HISTORY
-FROM THE SMALL BUT SIGNIFICANT
-TO WORKS OF A VERY DIFFERENT SCALE
-FRAGILE
-FAST
-FUNNY
-UNUSUAL
-VINTAGE
-RARE
-TRUE ICONS OF CULTURE
-2025 HAS BEEN DEFINED BY EXTRAORDINARY MOMENTS
-WE CARE DEEPLY ABOUT EACH ONE
-AND HOW WE CELEBRATE THEM
-EVERY PIECE AND EVERY PERSON SHAPES THE STORY OF THE YEAR
-WE COULDN’T HAVE DONE IT WITHOUT YOU`,
-        zh: `佳士得年度回顾
-荟萃古今 包罗万象
-玲珑臻品 蕴藏非凡
-磅礴巨作 撼动心魂
-瑰丽如诗
-疾速如风
-妙趣横生
-独树一帜
-经典隽永
-传世罕有
-当代文化传奇
-2025因无数非凡时刻而熠熠生辉
-我们由衷珍视每一瞬光芒
-更以敬意镌刻每一段 memory
-华彩篇章由每一件藏品、每一位知己共同谱写
-所有成就，皆因有您
-谨以此片，致谢厚爱`
+        en: `HERE AT CHRISTIE’S\nA SINGLE YEAR CONTAINS THE SWEEP OF HISTORY\nFROM THE SMALL BUT SIGNIFICANT\nTO WORKS OF A VERY DIFFERENT SCALE\nFRAGILE\nFAST\nFUNNY\nUNUSUAL\nVINTAGE\nRARE\nTRUE ICONS OF CULTURE\n2025 HAS BEEN DEFINED BY EXTRAORDINARY MOMENTS\nWE CARE DEEPLY ABOUT EACH ONE\nAND HOW WE CELEBRATE THEM\nEVERY PIECE AND EVERY PERSON SHAPES THE STORY OF THE YEAR\nWE COULDN’T HAVE DONE IT WITHOUT YOU`,
+        zh: `佳士得年度回顾\n荟萃古今 包罗万象\n玲珑臻品 蕴藏非凡\n磅礴巨作 撼动心魂\n瑰丽如诗\n疾速如风\n妙趣横生\n独树一帜\n经典隽永\n传世罕有\n当代文化传奇\n2025因无数非凡时刻而熠熠生辉\n我们由衷珍视每一瞬光芒\n更以敬意镌刻每一段记忆\n华彩篇章由每一件藏品、每一位知己共同谱写\n所有成就，皆因有您\n谨以此片，致谢厚爱`
       },
       {
         id: "vo-social-2",
         title: "Teaser",
         videoUrl: "https://raw.githubusercontent.com/lizzyli1856-blip/coding/main/dianlan.mp4", 
         poster: "https://raw.githubusercontent.com/lizzyli1856-blip/coding/main/dinalanruohua.png",
-        en: `An inner wish to cultivate the literati mind
-and an outward connection to nature, order and harmony
-The consolidation of authoritative power
-A portrait of strength that defines a dynasty
-The hallmark of a great empire:
-Prosperity, stability
-Longevity`,
-        zh: `內求文心修養
-外彰自然和諧之韻 
-皇權一統彰顯威儀
-剛健氣度王朝風範
-泱泱大國之吉象
-豐饒盛世海宇承平
-國祚綿長`
+        en: `An inner wish to cultivate the literati mind\nand an outward connection to nature, order and harmony\nThe consolidation of authoritative power\nA portrait of strength that defines a dynasty\nThe hallmark of a great empire:\nProsperity, stability\nLongevity`,
+        zh: `內求文心修養\n外彰自然和諧之韻 \n皇權一統彰顯威儀\n剛健氣度王朝風範\n泱泱大國之吉象\n豐饒盛世海宇承平\n國祚綿長`
       }
     ]
   };
@@ -1068,15 +995,15 @@ Longevity`,
                   <video className="w-full h-full object-cover" controls src={vid.videoUrl} poster={vid.poster} />
                 </div>
                 <div className="bg-[#F9F8F4] p-6 border border-[#E5E2D9] h-[400px] overflow-y-auto">
-                  <EditableText id={`vo-title-${vid.id}`} element="h5" className="font-serif text-lg border-b border-[#E5E2D9] pb-2 mb-4" initialText={vid.title} />
+                  <StaticText id={`vo-title-${vid.id}`} element="h5" className="font-serif text-lg border-b border-[#E5E2D9] pb-2 mb-4" initialText={vid.title} />
                   <div className="space-y-6">
                     <div>
                       <span className="text-[8px] font-bold text-[#8B8574] uppercase block mb-2">Original Script</span>
-                      <EditableText id={`vo-en-${vid.id}`} className="text-[10px] leading-relaxed text-[#444444]" initialText={vid.en} />
+                      <StaticText id={`vo-en-${vid.id}`} className="text-[10px] leading-relaxed text-[#444444]" initialText={vid.en} />
                     </div>
                     <div className="pt-4 border-t border-[#E5E2D9]/50">
                       <span className="text-[8px] font-bold text-[#C5A059] uppercase block mb-2">Chinese Transcreation</span>
-                      <EditableText id={`vo-zh-${vid.id}`} className="text-[11px] font-serif leading-relaxed" initialText={vid.zh} />
+                      <StaticText id={`vo-zh-${vid.id}`} className="text-[11px] font-serif leading-relaxed" initialText={vid.zh} />
                     </div>
                   </div>
                 </div>
@@ -1100,15 +1027,15 @@ Longevity`,
                   )}
                 </div>
                 <div className="bg-[#F9F8F4] p-6 border border-[#E5E2D9] h-[400px] overflow-y-auto">
-                  <EditableText id={`vo-title-${vid.id}`} element="h5" className="font-serif text-lg border-b border-[#E5E2D9] pb-2 mb-4" initialText={vid.title} />
+                  <StaticText id={`vo-title-${vid.id}`} element="h5" className="font-serif text-lg border-b border-[#E5E2D9] pb-2 mb-4" initialText={vid.title} />
                   <div className="space-y-6">
                     <div>
                       <span className="text-[8px] font-bold text-[#8B8574] uppercase block mb-2">Original Script</span>
-                      <EditableText id={`vo-en-${vid.id}`} className="text-[10px] leading-relaxed text-[#444444]" initialText={vid.en} />
+                      <StaticText id={`vo-en-${vid.id}`} className="text-[10px] leading-relaxed text-[#444444]" initialText={vid.en} />
                     </div>
                     <div className="pt-4 border-t border-[#E5E2D9]/50">
                       <span className="text-[8px] font-bold text-[#C5A059] uppercase block mb-2">Chinese Transcreation</span>
-                      <EditableText id={`vo-zh-${vid.id}`} className="text-[11px] font-serif leading-relaxed" initialText={vid.zh} />
+                      <StaticText id={`vo-zh-${vid.id}`} className="text-[11px] font-serif leading-relaxed" initialText={vid.zh} />
                     </div>
                   </div>
                 </div>
@@ -1149,16 +1076,23 @@ const AboutView = ({ profileImg }) => (
       <img src={profileImg} alt="Lizzy Li" className="w-full h-full object-cover" />
     </div>
     <div className="text-center max-w-4xl mb-24">
-      <p className="font-light leading-relaxed text-2xl md:text-3xl font-serif text-[#111111]">I am a strategic storyteller with a curator’s eye and a growth-focused mindset. Working at the intersection of content creation, public relations, and creative direction, I help brands translate heritage into meaningful growth.</p>
+      <StaticText 
+        id="about-intro"
+        className="font-light leading-relaxed text-2xl md:text-3xl font-serif text-[#111111]"
+        initialText="I am a strategic storyteller with a curator’s eye and a growth-focused mindset. Working at the intersection of content creation, public relations, and creative direction, I help brands translate heritage into meaningful growth."
+      />
     </div>
     <div className="bg-white border border-[#E5E2D9] p-10 md:p-16 relative overflow-hidden shadow-sm w-full mb-16">
        <div className="relative z-10">
           <h3 className="font-serif text-4xl mb-8">What I Bring</h3>
-          <p className="text-[#444444] leading-loose text-lg font-light text-justify">I have built expertise in the art and luxury sector since 2024, progressing from an intern to an officer role within Christie’s Content & Communications team. My experience across art and luxury has afforded me a cross-category perspective that informs cross-channel content strategy aimed at elevating brand desirability and driving commercial performance. Having supported high-profile brand collaborations and integrated content strategies, I create clear, brand-aligned narratives that bridge commercial objectives with elegant communication.</p>
+          <StaticText 
+            id="about-details"
+            className="text-[#444444] leading-loose text-lg font-light text-justify"
+            initialText="I have built expertise in the art and luxury sector since 2024, progressing from an intern to an officer role within Christie’s Content & Communications team. My experience across art and luxury has afforded me a cross-category perspective that informs cross-channel content strategy aimed at elevating brand desirability and driving commercial performance. Having supported high-profile brand collaborations and integrated content strategies, I create clear, brand-aligned narratives that bridge commercial objectives with elegant communication."
+          />
        </div>
     </div>
 
-    {/* Core Competencies Integration */}
     <div className="w-full max-w-3xl pt-8 pb-24 text-center">
       <h3 className="text-[10px] tracking-[0.4em] text-[#8B8574] uppercase font-bold mb-10">Core competencies</h3>
       <div className="flex flex-wrap justify-center gap-4 md:gap-8">
@@ -1181,7 +1115,11 @@ const ContactView = () => (
   <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center">
     <FadeIn delay={0.2}>
       <h2 className="text-3xl font-serif mb-8">Get In Touch</h2>
-      <p className="text-lg tracking-widest border-b border-[#111111] pb-1 uppercase mb-24">lizzyli1856@gmail.com</p>
+      <StaticText 
+        id="contact-email"
+        className="text-lg tracking-widest border-b border-[#111111] pb-1 uppercase mb-24 inline-block"
+        initialText="lizzyli1856@gmail.com"
+      />
     </FadeIn>
   </div>
 );
